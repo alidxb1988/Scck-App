@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCCK - Système de Gestion Complet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        [v-cloak] { display: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .success-bg { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .warning-bg { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .info-bg { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" v-cloak>
+        <!-- Login Screen -->
+        <div v-if="!user" class="fixed inset-0 gradient-bg flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm">
+                <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">SCCK Management</h1>
+                <form @submit.prevent="login" class="space-y-4">
+                    <div>
+                        <input v-model="loginForm.email" type="email" placeholder="Email" required 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input v-model="loginForm.password" type="password" placeholder="Mot de passe" required 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button type="submit" :disabled="loading" 
+                        class="w-full gradient-bg text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+                        {{ loading ? 'Connexion...' : 'Connexion' }}
+                    </button>
+                    <p v-if="error" class="text-red-500 text-sm text-center">{{ error }}</p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div v-if="user">
+            <!-- Navigation -->
+            <nav class="gradient-bg text-white shadow-lg">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                <h1 class="text-xl font-bold">SCCK Management</h1>
+                            </div>
+                            <div class="hidden md:block">
+                                <div class="ml-10 flex items-baseline space-x-4">
+                                    <button @click="showModule('dashboard')" :class="{'bg-white bg-opacity-20': currentModule === 'dashboard'}" 
+                                        class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                        Tableau de Bord
+                                    </button>
+                                    <button @click="showModule('producers')" :class="{'bg-white bg-opacity-20': currentModule === 'producers'}" 
+                                        class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                        Producteurs
+                                    </button>
+                                    <button @click="showModule('collection')" :class="{'bg-white bg-opacity-20': currentModule === 'collection'}" 
+                                        class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                        Collecte
+                                    </button>
+                                    <button @click="showModule('distribution')" :class="{'bg-white bg-opacity-20': currentModule === 'distribution'}" 
+                                        class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                        Distribution
+                                    </button>
+                                    <button @click="showModule('badge-generator')" :class="{'bg-white bg-opacity-20': currentModule === 'badge-generator'}" 
+                                        class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                        Gén. Badge
+                                    </button>
+                                    <button v-if="userRole === 'admin'" @click="showModule('admin')" :class="{'bg-white bg-opacity-20': currentModule === 'admin'}" 
+                                        class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                        Administration
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm">{{ user.email }} - {{ userRole === 'admin' ? 'Administrateur' : 'Superviseur' }}</span>
+                            <button @click="logout" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                Déconnexion
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mobile menu -->
+                <div class="md:hidden">
+                    <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                        <button @click="showModule('dashboard')" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Tableau de Bord</button>
+                        <button @click="showModule('producers')" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Producteurs</button>
+                        <button @click="showModule('collection')" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Collecte</button>
+                        <button @click="showModule('distribution')" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Distribution</button>
+                        <button @click="showModule('badge-generator')" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Gén. Badge</button>
+                        <button v-if="userRole === 'admin'" @click="showModule('admin')" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Administration</button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <!-- Dashboard Module -->
+                <div v-if="currentModule === 'dashboard'" class="module fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Tableau de Bord</h2>
+                        <p class="text-gray-600">Vue d'ensemble des activités SCCK</p>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Producteurs Actifs</p>
+                                    <p class="text-2xl font-semibold text-gray-900">{{ dashboardData.totalProducers || 0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                        <i data-lucide="package" class="w-5 h-5 text-green-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Collecte (kg)</p>
+                                    <p class="text-2xl font-semibold text-gray-900">{{ dashboardData.totalCollection || 0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                        <i data-lucide="truck" class="w-5 h-5 text-yellow-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Distributions</p>
+                                    <p class="text-2xl font-semibold text-gray-900">{{ dashboardData.totalDistributions || 0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                        <i data-lucide="dollar-sign" class="w-5 h-5 text-purple-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Revenus (FCFA)</p>
+                                    <p class="text-2xl font-semibold text-gray-900">{{ (dashboardData.totalRevenue || 0).toLocaleString() }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activities -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Activités Récentes</h3>
+                            <div class="space-y-4">
+                                <div v-for="(activity, index) in recentActivities" :key="index" class="flex items-center space-x-3">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-sm text-gray-600">{{ activity.message }}</span>
+                                    <span class="text-xs text-gray-400">{{ formatTime(activity.timestamp) }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Collecte par Zone</h3>
+                            <div class="space-y-3">
+                                <div v-for="(zone, index) in collectionByZone" :key="index" class="mb-4">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-sm text-gray-600">{{ zone.name }}</span>
+                                        <span class="text-sm font-semibold">{{ zone.value }} kg</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div :class="['h-2 rounded-full', zone.color]" :style="`width: ${zone.percentage}%`"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Producers Module -->
+                <div v-if="currentModule === 'producers'" class="module fade-in">
+                    <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                        <div>
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">Gestion des Producteurs</h2>
+                            <p class="text-gray-600">Recensement et suivi des producteurs</p>
+                        </div>
+                        <button @click="showProducerForm()" class="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                            Nouveau Producteur
+                        </button>
+                    </div>
+
+                    <!-- Search and Filters -->
+                    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                                <input type="text" v-model="producerSearch" placeholder="Nom, matricule..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                                <select v-model="zoneFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Toutes les zones</option>
+                                    <option value="nord">Zone Nord</option>
+                                    <option value="sud">Zone Sud</option>
+                                    <option value="est">Zone Est</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                                <select v-model="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="actif">Actif</option>
+                                    <option value="inactif">Inactif</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Producers List -->
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producteur</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localité</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="producer in filteredProducers" :key="producer.id" class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img v-if="producer.photo" :src="producer.photo" class="h-10 w-10 rounded-full object-cover" alt="">
+                                                    <div v-else class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <i data-lucide="user" class="w-5 h-5 text-gray-500"></i>
+                                                    </div>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-medium text-gray-900">{{ producer.lastName }} {{ producer.firstName }}</div>
+                                                    <div class="text-sm text-gray-500">{{ producer.cni }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ producer.matricule }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ producer.zone }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ producer.locality }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ producer.contact }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button @click="showProducerDetails(producer)" class="text-blue-600 hover:text-blue-900 mr-3">
+                                                <i data-lucide="eye" class="w-4 h-4"></i>
+                                            </button>
+                                            <button @click="editProducer(producer)" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                                <i data-lucide="edit" class="w-4 h-4"></i>
+                                            </button>
+                                            <button @click="deleteProducer(producer)" class="text-red-600 hover:text-red-900">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Producer Form Modal -->
+                <div v-if="showProducerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-900">{{ editingProducer ? 'Modifier' : 'Nouveau' }} Producteur</h3>
+                        </div>
+                        <form @submit.prevent="saveProducer" class="px-6 py-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="col-span-2">
+                                    <h4 class="text-lg font-medium text-gray-900 mb-4">Informations sur les délégués</h4>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                                    <input v-model="producerForm.delegateLastName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
+                                    <input v-model="producerForm.delegateFirstName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Matricule</label>
+                                    <input v-model="producerForm.delegateMatricule" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                                    <select v-model="producerForm.delegateZone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="nord">Zone Nord</option>
+                                        <option value="sud">Zone Sud</option>
+                                        <option value="est">Zone Est</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Localité</label>
+                                    <input v-model="producerForm.delegateLocality" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="col-span-2">
+                                    <h4 class="text-lg font-medium text-gray-900 mb-4 mt-6">Informations sur le producteur</h4>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                                    <input v-model="producerForm.lastName" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
+                                    <input v-model="producerForm.firstName" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CNI Numéro</label>
+                                    <input v-model="producerForm.cni" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Contact</label>
+                                    <input v-model="producerForm.contact" type="tel" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Matricule</label>
+                                    <input v-model="producerForm.matricule" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Superficie (ha)</label>
+                                    <input v-model="producerForm.area" type="number" step="0.01" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Photo</label>
+                                    <input type="file" @change="handlePhotoUpload" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <div v-if="producerForm.photo" class="mt-2">
+                                        <img :src="producerForm.photo" class="h-20 w-20 object-cover rounded-md" alt="Photo preview">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-end space-x-3">
+                                <button type="button" @click="showProducerModal = false" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    Annuler
+                                </button>
+                                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    {{ editingProducer ? 'Mettre à jour' : 'Enregistrer' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Badge Generator Module -->
+                <div v-if="currentModule === 'badge-generator'" class="module fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Générateur de Badges</h2>
+                        <p class="text-gray-600">Création de badges d'identification pour les producteurs</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Form -->
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Informations du badge</h3>
+                            <form @submit.prevent="generateBadge" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                                    <input v-model="badgeForm.lastName" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
+                                    <input v-model="badgeForm.firstName" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CNI Numéro</label>
+                                    <input v-model="badgeForm.cni" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Matricule</label>
+                                    <input v-model="badgeForm.matricule" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Contact</label>
+                                    <input v-model="badgeForm.contact" type="tel" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Photo</label>
+                                    <input type="file" @change="handleBadgePhotoUpload" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <div v-if="badgeForm.photo" class="mt-2">
+                                        <img :src="badgeForm.photo" class="h-20 w-20 object-cover rounded-md" alt="Photo preview">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md font-medium hover:bg-blue-700 transition-colors">
+                                    Générer le badge
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Aperçu du badge</h3>
+                            <div class="border-2 border-gray-200 rounded-lg p-4 flex justify-center">
+                                <div class="badge-preview w-64 h-96 bg-white shadow-lg rounded-lg overflow-hidden border border-gray-300">
+                                    <div class="badge-header h-12 gradient-bg flex items-center justify-center">
+                                        <h4 class="text-white font-bold text-lg">SCCK</h4>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="flex justify-center mb-4">
+                                            <div class="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300">
+                                                <img v-if="badgeForm.photo" :src="badgeForm.photo" class="w-full h-full object-cover" alt="Photo">
+                                                <div v-else class="w-full h-full bg-gray-200 flex items-center justify-center">
+                                                    <i data-lucide="user" class="w-8 h-8 text-gray-500"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mb-4">
+                                            <h3 class="text-xl font-bold text-gray-900">{{ badgeForm.lastName }} {{ badgeForm.firstName }}</h3>
+                                            <p class="text-sm text-gray-600">Producteur SCCK</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between border-b border-gray-200 pb-1">
+                                                <span class="text-sm font-medium text-gray-600">CNI:</span>
+                                                <span class="text-sm text-gray-900">{{ badgeForm.cni || 'N/A' }}</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-gray-200 pb-1">
+                                                <span class="text-sm font-medium text-gray-600">Matricule:</span>
+                                                <span class="text-sm text-gray-900">{{ badgeForm.matricule || 'N/A' }}</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-gray-200 pb-1">
+                                                <span class="text-sm font-medium text-gray-600">Contact:</span>
+                                                <span class="text-sm text-gray-900">{{ badgeForm.contact || 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="badge-footer h-8 bg-gray-100 flex items-center justify-center">
+                                        <p class="text-xs text-gray-600">ID: {{ Math.floor(Math.random() * 10000).toString().padStart(4, '0') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-center">
+                                <button @click="printBadge" class="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition-colors flex items-center">
+                                    <i data-lucide="printer" class="w-4 h-4 mr-2"></i>
+                                    Imprimer le badge
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other modules would go here -->
+                <div v-if="currentModule === 'collection'" class="module fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Module de Collecte</h2>
+                        <p class="text-gray-600">Gestion des collectes de produits</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <p class="text-gray-600">Cette section est en cours de développement.</p>
+                    </div>
+                </div>
+
+                <div v-if="currentModule === 'distribution'" class="module fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Module de Distribution</h2>
+                        <p class="text-gray-600">Gestion des distributions aux producteurs</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <p class="text-gray-600">Cette section est en cours de développement.</p>
+                    </div>
+                </div>
+
+                <div v-if="currentModule === 'admin' && userRole === 'admin'" class="module fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Administration</h2>
+                        <p class="text-gray-600">Gestion des utilisateurs et paramètres système</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <p class="text-gray-600">Cette section est en cours de développement.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDummyAPIKeyForDemoPurposesOnly",
+            authDomain: "scck-management.firebaseapp.com",
+            projectId: "scck-management",
+            storageBucket: "scck-management.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdefghijklmnopqrstuv"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        // Initialize Vue app
+        new Vue({
+            el: '#app',
+            data: {
+                user: null,
+                userRole: 'supervisor',
+                loading: false,
+                error: '',
+                loginForm: {
+                    email: '',
+                    password: ''
+                },
+                currentModule: 'dashboard',
+                showProducerModal: false,
+                editingProducer: null,
+                producerForm: {
+                    delegateLastName: '',
+                    delegateFirstName: '',
+                    delegateMatricule: '',
+                    delegateZone: 'nord',
+                    delegateLocality: '',
+                    lastName: '',
+                    firstName: '',
+                    cni: '',
+                    contact: '',
+                    matricule: '',
+                    area: '',
+                    photo: ''
+                },
+                badgeForm: {
+                    lastName: '',
+                    firstName: '',
+                    cni: '',
+                    matricule: '',
+                    contact: '',
+                    photo: ''
+                },
+                producers: [],
+                producerSearch: '',
+                zoneFilter: '',
+                statusFilter: '',
+                dashboardData: {
+                    totalProducers: 0,
+                    totalCollection: 0,
+                    totalDistributions: 0,
+                    totalRevenue: 0
+                },
+                recentActivities: [
+                    { message: "Nouveau producteur enregistré", timestamp: new Date(Date.now() - 3600000) },
+                    { message: "Collecte de 250kg réalisée", timestamp: new Date(Date.now() - 7200000) },
+                    { message: "Distribution de semences programmée", timestamp: new Date(Date.now() - 10800000) }
+                ],
+                collectionByZone: [
+                    { name: "Zone Nord", value: 350, percentage: 40, color: "bg-blue-500" },
+                    { name: "Zone Sud", value: 280, percentage: 32, color: "bg-green-500" },
+                    { name: "Zone Est", value: 250, percentage: 28, color: "bg-yellow-500" }
+                ]
+            },
+            computed: {
+                filteredProducers() {
+                    return this.producers.filter(producer => {
+                        const matchesSearch = !this.producerSearch || 
+                            producer.lastName.toLowerCase().includes(this.producerSearch.toLowerCase()) ||
+                            producer.firstName.toLowerCase().includes(this.producerSearch.toLowerCase()) ||
+                            producer.matricule.toLowerCase().includes(this.producerSearch.toLowerCase());
+                        
+                        const matchesZone = !this.zoneFilter || producer.zone === this.zoneFilter;
+                        
+                        return matchesSearch && matchesZone;
+                    });
+                }
+            },
+            methods: {
+                login() {
+                    this.loading = true;
+                    this.error = '';
+                    
+                    // For demo purposes, we'll simulate login
+                    setTimeout(() => {
+                        this.loading = false;
+                        this.user = { email: this.loginForm.email };
+                        
+                        // Set admin role for demo@example.com
+                        if (this.loginForm.email === 'admin@example.com') {
+                            this.userRole = 'admin';
+                        } else {
+                            this.userRole = 'supervisor';
+                        }
+                        
+                        // Load initial data
+                        this.loadProducers();
+                    }, 1000);
+                    
+                    // In a real app, you would use:
+                    /*
+                    auth.signInWithEmailAndPassword(this.loginForm.email, this.loginForm.password)
+                        .then((userCredential) => {
+                            this.user = userCredential.user;
+                            this.loading = false;
+                            this.loadProducers();
+                        })
+                        .catch((error) => {
+                            this.error = error.message;
+                            this.loading = false;
+                        });
+                    */
+                },
+                logout() {
+                    auth.signOut().then(() => {
+                        this.user = null;
+                    });
+                },
+                showModule(module) {
+                    this.currentModule = module;
+                },
+                showProducerForm() {
+                    this.editingProducer = null;
+                    this.producerForm = {
+                        delegateLastName: '',
+                        delegateFirstName: '',
+                        delegateMatricule: '',
+                        delegateZone: 'nord',
+                        delegateLocality: '',
+                        lastName: '',
+                        firstName: '',
+                        cni: '',
+                        contact: '',
+                        matricule: '',
+                        area: '',
+                        photo: ''
+                    };
+                    this.showProducerModal = true;
+                },
+                editProducer(producer) {
+                    this.editingProducer = producer;
+                    this.producerForm = { ...producer };
+                    this.showProducerModal = true;
+                },
+                saveProducer() {
+                    // In a real app, save to Firestore
+                    if (this.editingProducer) {
+                        // Update existing producer
+                        const index = this.producers.findIndex(p => p.id === this.editingProducer.id);
+                        if (index !== -1) {
+                            this.producers[index] = { ...this.producerForm, id: this.editingProducer.id };
+                        }
+                    } else {
+                        // Add new producer
+                        this.producers.push({
+                            ...this.producerForm,
+                            id: Date.now().toString()
+                        });
+                    }
+                    
+                    this.showProducerModal = false;
+                    this.$forceUpdate();
+                },
+                deleteProducer(producer) {
+                    if (confirm(`Êtes-vous sûr de vouloir supprimer ${producer.lastName} ${producer.firstName} ?`)) {
+                        this.producers = this.producers.filter(p => p.id !== producer.id);
+                    }
+                },
+                showProducerDetails(producer) {
+                    alert(`Détails de ${producer.lastName} ${producer.firstName}\nCNI: ${producer.cni}\nContact: ${producer.contact}`);
+                },
+                handlePhotoUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.producerForm.photo = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+                handleBadgePhotoUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.badgeForm.photo = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+                generateBadge() {
+                    alert('Badge généré avec succès!');
+                },
+                printBadge() {
+                    window.print();
+                },
+                loadProducers() {
+                    // In a real app, load from Firestore
+                    this.producers = [
+                        {
+                            id: '1',
+                            delegateLastName: 'Diallo',
+                            delegateFirstName: 'Mamadou',
+                            delegateMatricule: 'DL001',
+                            delegateZone: 'nord',
+                            delegateLocality: 'Touba',
+                            lastName: 'Sarr',
+                            firstName: 'Ibrahima',
+                            cni: '1234567890',
+                            contact: '771234567',
+                            matricule: 'SR001',
+                            area: 2.5,
+                            photo: ''
+                        },
+                        {
+                            id: '2',
+                            delegateLastName: 'Ndiaye',
+                            delegateFirstName: 'Awa',
+                            delegateMatricule: 'ND002',
+                            delegateZone: 'sud',
+                            delegateLocality: 'Ziguinchor',
+                            lastName: 'Diop',
+                            firstName: 'Fatou',
+                            cni: '0987654321',
+                            contact: '776543210',
+                            matricule: 'DP002',
+                            area: 3.2,
+                            photo: ''
+                        }
+                    ];
+                    
+                    this.dashboardData.totalProducers = this.producers.length;
+                },
+                formatTime(date) {
+                    return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                }
+            },
+            mounted() {
+                // Check if user is logged in
+                auth.onAuthStateChanged((user) => {
+                    this.user = user;
+                    if (user) {
+                        this.loadProducers();
+                    }
+                });
+                
+                // Initialize Lucide icons
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+</html>
