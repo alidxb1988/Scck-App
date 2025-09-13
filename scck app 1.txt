@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCCK - Système de Gestion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .success-bg { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .warning-bg { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .info-bg { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold">SCCK Management</h1>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <button onclick="showModule('dashboard')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Tableau de Bord
+                            </button>
+                            <button onclick="showModule('producers')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Producteurs
+                            </button>
+                            <button onclick="showModule('collection')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Collecte
+                            </button>
+                            <button onclick="showModule('distribution')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Distribution
+                            </button>
+                            <button onclick="showModule('admin')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Administration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm" id="userInfo">Superviseur - Zone Nord</span>
+                    <button onclick="logout()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div class="md:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <button onclick="showModule('dashboard')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Tableau de Bord</button>
+                <button onclick="showModule('producers')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Producteurs</button>
+                <button onclick="showModule('collection')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Collecte</button>
+                <button onclick="showModule('distribution')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Distribution</button>
+                <button onclick="showModule('admin')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Administration</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Dashboard Module -->
+        <div id="dashboard-module" class="module fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Tableau de Bord</h2>
+                <p class="text-gray-600">Vue d'ensemble des activités SCCK</p>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Producteurs Actifs</p>
+                            <p class="text-2xl font-semibold text-gray-900" id="totalProducers">247</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="package" class="w-5 h-5 text-green-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Collecte (kg)</p>
+                            <p class="text-2xl font-semibold text-gray-900" id="totalCollection">12,450</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="truck" class="w-5 h-5 text-yellow-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Distributions</p>
+                            <p class="text-2xl font-semibold text-gray-900" id="totalDistributions">89</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="dollar-sign" class="w-5 h-5 text-purple-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Revenus (FCFA)</p>
+                            <p class="text-2xl font-semibold text-gray-900" id="totalRevenue">8,970,000</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Activités Récentes</h3>
+                    <div class="space-y-4" id="recentActivities">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">Collecte de 150kg - Producteur PROD001</span>
+                            <span class="text-xs text-gray-400">Il y a 2h</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">Nouveau producteur enregistré - PROD248</span>
+                            <span class="text-xs text-gray-400">Il y a 4h</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">Distribution d'intrants - 50kg d'engrais</span>
+                            <span class="text-xs text-gray-400">Il y a 6h</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Collecte par Zone</h3>
+                    <div class="space-y-3" id="collectionByZone">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Zone Nord</span>
+                            <span class="text-sm font-semibold">4,200 kg</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: 70%"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Zone Sud</span>
+                            <span class="text-sm font-semibold">3,800 kg</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full" style="width: 63%"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Zone Est</span>
+                            <span class="text-sm font-semibold">2,950 kg</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-yellow-600 h-2 rounded-full" style="width: 49%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Producers Module -->
+        <div id="producers-module" class="module hidden">
+            <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Gestion des Producteurs</h2>
+                    <p class="text-gray-600">Recensement et suivi des producteurs</p>
+                </div>
+                <button onclick="showProducerForm()" class="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                    Nouveau Producteur
+                </button>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                        <input type="text" id="producerSearch" placeholder="Nom, matricule..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                        <select id="zoneFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Toutes les zones</option>
+                            <option value="nord">Zone Nord</option>
+                            <option value="sud">Zone Sud</option>
+                            <option value="est">Zone Est</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                        <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Tous les statuts</option>
+                            <option value="actif">Actif</option>
+                            <option value="inactif">Inactif</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Producers List -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producteur</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="producersTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Producer rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collection Module -->
+        <div id="collection-module" class="module hidden">
+            <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Gestion des Collectes</h2>
+                    <p class="text-gray-600">Enregistrement et suivi des collectes</p>
+                </div>
+                <button onclick="showCollectionForm()" class="mt-4 sm:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                    Nouvelle Collecte
+                </button>
+            </div>
+
+            <!-- Collection Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="package" class="w-5 h-5 text-green-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Collecte Aujourd'hui</p>
+                            <p class="text-2xl font-semibold text-gray-900">850 kg</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="calendar" class="w-5 h-5 text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Collecte ce Mois</p>
+                            <p class="text-2xl font-semibold text-gray-900">12,450 kg</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="dollar-sign" class="w-5 h-5 text-yellow-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Paiements Effectués</p>
+                            <p class="text-2xl font-semibold text-gray-900">8,970,000 F</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collections List -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Collectes Récentes</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producteur</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité (kg)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix/kg</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="collectionsTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Collection rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution Module -->
+        <div id="distribution-module" class="module hidden">
+            <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Gestion des Distributions</h2>
+                    <p class="text-gray-600">Distribution d'intrants et gestion des crédits</p>
+                </div>
+                <button onclick="showDistributionForm()" class="mt-4 sm:mt-0 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                    Nouvelle Distribution
+                </button>
+            </div>
+
+            <!-- Distribution Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="truck" class="w-5 h-5 text-purple-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Distributions</p>
+                            <p class="text-2xl font-semibold text-gray-900">89</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Remboursés</p>
+                            <p class="text-2xl font-semibold text-gray-900">67</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="clock" class="w-5 h-5 text-yellow-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">En Attente</p>
+                            <p class="text-2xl font-semibold text-gray-900">22</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="dollar-sign" class="w-5 h-5 text-red-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Crédit Total</p>
+                            <p class="text-2xl font-semibold text-gray-900">2,340,000 F</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distributions List -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Distributions Récentes</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producteur</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Intrant</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="distributionsTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Distribution rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Module -->
+        <div id="admin-module" class="module hidden">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Administration</h2>
+                <p class="text-gray-600">Gestion globale du système</p>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Financial Overview -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Vue Financière</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Total Collectes</span>
+                            <span class="text-lg font-semibold text-green-600">+8,970,000 F</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Total Distributions</span>
+                            <span class="text-lg font-semibold text-red-600">-2,340,000 F</span>
+                        </div>
+                        <hr>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-900">Solde Net</span>
+                            <span class="text-xl font-bold text-blue-600">6,630,000 F</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zone Management -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Gestion des Prix par Zone</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Zone Nord</span>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" value="720" class="w-20 px-2 py-1 text-sm border border-gray-300 rounded">
+                                <span class="text-sm text-gray-500">F/kg</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Zone Sud</span>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" value="700" class="w-20 px-2 py-1 text-sm border border-gray-300 rounded">
+                                <span class="text-sm text-gray-500">F/kg</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Zone Est</span>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" value="680" class="w-20 px-2 py-1 text-sm border border-gray-300 rounded">
+                                <span class="text-sm text-gray-500">F/kg</span>
+                            </div>
+                        </div>
+                        <button class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Mettre à Jour les Prix
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export and Reports -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Exports et Rapports</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="exportData('producers')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+                        Export Producteurs
+                    </button>
+                    <button onclick="exportData('collections')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+                        Export Collectes
+                    </button>
+                    <button onclick="exportData('distributions')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+                        Export Distributions
+                    </button>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Gestion des Utilisateurs</h3>
+                    <button onclick="showUserForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                        Nouvel Utilisateur
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- User rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Container -->
+    <div id="modalContainer" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div id="modalContent" class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+                <!-- Modal content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Toast notifications will be added here -->
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Application State
+        let currentModule = 'dashboard';
+        let producers = [
+            { id: 1, matricule: 'PROD001', nom: 'Kouassi Jean', prenom: 'Baptiste', zone: 'nord', telephone: '0701234567', statut: 'actif', dateInscription: '2024-01-15' },
+            { id: 2, matricule: 'PROD002', nom: 'Traore Aminata', prenom: 'Fatou', zone: 'sud', telephone: '0709876543', statut: 'actif', dateInscription: '2024-01-20' },
+            { id: 3, matricule: 'PROD003', nom: 'Kone Seydou', prenom: 'Ibrahim', zone: 'est', telephone: '0705555555', statut: 'inactif', dateInscription: '2024-02-01' }
+        ];
+
+        let collections = [
+            { id: 1, date: '2024-12-15', producteurId: 1, producteur: 'Kouassi Jean Baptiste', quantite: 150, prixKg: 720, total: 108000, statut: 'payé' },
+            { id: 2, date: '2024-12-14', producteurId: 2, producteur: 'Traore Aminata Fatou', quantite: 200, prixKg: 700, total: 140000, statut: 'payé' },
+            { id: 3, date: '2024-12-13', producteurId: 1, producteur: 'Kouassi Jean Baptiste', quantite: 100, prixKg: 720, total: 72000, statut: 'partiel' }
+        ];
+
+        let distributions = [
+            { id: 1, date: '2024-12-10', producteurId: 1, producteur: 'Kouassi Jean Baptiste', intrant: 'Engrais NPK', quantite: 50, valeur: 75000, statut: 'remboursé' },
+            { id: 2, date: '2024-12-08', producteurId: 2, producteur: 'Traore Aminata Fatou', intrant: 'Semences', quantite: 25, valeur: 50000, statut: 'en_attente' },
+            { id: 3, date: '2024-12-05', producteurId: 3, producteur: 'Kone Seydou Ibrahim', intrant: 'Pesticides', quantite: 10, valeur: 30000, statut: 'remboursé' }
+        ];
+
+        let users = [
+            { id: 1, nom: 'Admin', email: 'admin@scck.com', role: 'Administrateur', zone: 'Toutes', statut: 'actif' },
+            { id: 2, nom: 'Superviseur Nord', email: 'sup.nord@scck.com', role: 'Superviseur', zone: 'Nord', statut: 'actif' },
+            { id: 3, nom: 'Superviseur Sud', email: 'sup.sud@scck.com', role: 'Superviseur', zone: 'Sud', statut: 'actif' }
+        ];
+
+        // Navigation Functions
+        function showModule(moduleName) {
+            // Hide all modules
+            document.querySelectorAll('.module').forEach(module => {
+                module.classList.add('hidden');
+            });
+
+            // Show selected module
+            document.getElementById(moduleName + '-module').classList.remove('hidden');
+            document.getElementById(moduleName + '-module').classList.add('fade-in');
+
+            // Update navigation
+            document.querySelectorAll('.nav-btn, .nav-btn-mobile').forEach(btn => {
+                btn.classList.remove('bg-white', 'bg-opacity-20');
+            });
+
+            currentModule = moduleName;
+
+            // Populate module data
+            switch(moduleName) {
+                case 'producers':
+                    populateProducersTable();
+                    break;
+                case 'collection':
+                    populateCollectionsTable();
+                    break;
+                case 'distribution':
+                    populateDistributionsTable();
+                    break;
+                case 'admin':
+                    populateUsersTable();
+                    break;
+            }
+
+            // Reinitialize icons
+            lucide.createIcons();
+        }
+
+        // Producer Functions
+        function populateProducersTable() {
+            const tbody = document.getElementById('producersTableBody');
+            tbody.innerHTML = '';
+
+            producers.forEach(producer => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${producer.nom} ${producer.prenom}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${producer.matricule}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Zone ${producer.zone.charAt(0).toUpperCase() + producer.zone.slice(1)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${producer.telephone}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${producer.statut === 'actif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${producer.statut.charAt(0).toUpperCase() + producer.statut.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="editProducer(${producer.id})" class="text-indigo-600 hover:text-indigo-900 mr-3">Modifier</button>
+                        <button onclick="viewProducer(${producer.id})" class="text-green-600 hover:text-green-900">Voir</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showProducerForm(producerId = null) {
+            const isEdit = producerId !== null;
+            const producer = isEdit ? producers.find(p => p.id === producerId) : {};
+
+            const modalContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">${isEdit ? 'Modifier' : 'Nouveau'} Producteur</h3>
+                </div>
+                <form onsubmit="saveProducer(event, ${producerId})" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
+                            <input type="text" name="nom" value="${producer.nom || ''}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
+                            <input type="text" name="prenom" value="${producer.prenom || ''}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone *</label>
+                            <input type="tel" name="telephone" value="${producer.telephone || ''}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Zone *</label>
+                            <select name="zone" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sélectionner une zone</option>
+                                <option value="nord" ${producer.zone === 'nord' ? 'selected' : ''}>Zone Nord</option>
+                                <option value="sud" ${producer.zone === 'sud' ? 'selected' : ''}>Zone Sud</option>
+                                <option value="est" ${producer.zone === 'est' ? 'selected' : ''}>Zone Est</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Superficie (ha)</label>
+                            <input type="number" name="superficie" value="${producer.superficie || ''}" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                            <select name="statut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="actif" ${producer.statut === 'actif' ? 'selected' : ''}>Actif</option>
+                                <option value="inactif" ${producer.statut === 'inactif' ? 'selected' : ''}>Inactif</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700">
+                            ${isEdit ? 'Modifier' : 'Enregistrer'}
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            showModal(modalContent);
+        }
+
+        function saveProducer(event, producerId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+
+            if (producerId) {
+                // Update existing producer
+                const index = producers.findIndex(p => p.id === producerId);
+                producers[index] = { ...producers[index], ...data };
+                showToast('Producteur modifié avec succès', 'success');
+            } else {
+                // Add new producer
+                const newId = Math.max(...producers.map(p => p.id)) + 1;
+                const matricule = `PROD${String(newId).padStart(3, '0')}`;
+                producers.push({
+                    id: newId,
+                    matricule,
+                    dateInscription: new Date().toISOString().split('T')[0],
+                    ...data
+                });
+                showToast('Producteur enregistré avec succès', 'success');
+            }
+
+            closeModal();
+            populateProducersTable();
+        }
+
+        function editProducer(id) {
+            showProducerForm(id);
+        }
+
+        function viewProducer(id) {
+            const producer = producers.find(p => p.id === id);
+            const modalContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Détails du Producteur</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Matricule</label>
+                            <p class="mt-1 text-sm text-gray-900">${producer.matricule}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Nom Complet</label>
+                            <p class="mt-1 text-sm text-gray-900">${producer.nom} ${producer.prenom}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Téléphone</label>
+                            <p class="mt-1 text-sm text-gray-900">${producer.telephone}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Zone</label>
+                            <p class="mt-1 text-sm text-gray-900">Zone ${producer.zone.charAt(0).toUpperCase() + producer.zone.slice(1)}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Date d'inscription</label>
+                            <p class="mt-1 text-sm text-gray-900">${new Date(producer.dateInscription).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Statut</label>
+                            <span class="mt-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${producer.statut === 'actif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${producer.statut.charAt(0).toUpperCase() + producer.statut.slice(1)}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            showModal(modalContent);
+        }
+
+        // Collection Functions
+        function populateCollectionsTable() {
+            const tbody = document.getElementById('collectionsTableBody');
+            tbody.innerHTML = '';
+
+            collections.forEach(collection => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(collection.date).toLocaleDateString('fr-FR')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${collection.producteur}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${collection.quantite} kg</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${collection.prixKg} F</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${collection.total.toLocaleString()} F</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${collection.statut === 'payé' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${collection.statut.charAt(0).toUpperCase() + collection.statut.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="printReceipt(${collection.id})" class="text-blue-600 hover:text-blue-900 mr-3">Reçu</button>
+                        <button onclick="editCollection(${collection.id})" class="text-indigo-600 hover:text-indigo-900">Modifier</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showCollectionForm(collectionId = null) {
+            const isEdit = collectionId !== null;
+            const collection = isEdit ? collections.find(c => c.id === collectionId) : {};
+
+            const modalContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">${isEdit ? 'Modifier' : 'Nouvelle'} Collecte</h3>
+                </div>
+                <form onsubmit="saveCollection(event, ${collectionId})" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                            <input type="date" name="date" value="${collection.date || new Date().toISOString().split('T')[0]}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Producteur *</label>
+                            <select name="producteurId" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sélectionner un producteur</option>
+                                ${producers.filter(p => p.statut === 'actif').map(p => 
+                                    `<option value="${p.id}" ${collection.producteurId === p.id ? 'selected' : ''}>${p.matricule} - ${p.nom} ${p.prenom}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Quantité (kg) *</label>
+                            <input type="number" name="quantite" value="${collection.quantite || ''}" required step="0.1" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Prix/kg (F) *</label>
+                            <input type="number" name="prixKg" value="${collection.prixKg || '720'}" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Statut de Paiement</label>
+                            <select name="statut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="payé" ${collection.statut === 'payé' ? 'selected' : ''}>Payé</option>
+                                <option value="partiel" ${collection.statut === 'partiel' ? 'selected' : ''}>Paiement Partiel</option>
+                                <option value="impayé" ${collection.statut === 'impayé' ? 'selected' : ''}>Non Payé</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700">
+                            ${isEdit ? 'Modifier' : 'Enregistrer'}
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            showModal(modalContent);
+        }
+
+        function saveCollection(event, collectionId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            
+            // Calculate total
+            data.total = parseFloat(data.quantite) * parseFloat(data.prixKg);
+            
+            // Get producer name
+            const producer = producers.find(p => p.id === parseInt(data.producteurId));
+            data.producteur = `${producer.nom} ${producer.prenom}`;
+
+            if (collectionId) {
+                // Update existing collection
+                const index = collections.findIndex(c => c.id === collectionId);
+                collections[index] = { ...collections[index], ...data };
+                showToast('Collecte modifiée avec succès', 'success');
+            } else {
+                // Add new collection
+                const newId = Math.max(...collections.map(c => c.id)) + 1;
+                collections.push({
+                    id: newId,
+                    ...data,
+                    producteurId: parseInt(data.producteurId)
+                });
+                showToast('Collecte enregistrée avec succès', 'success');
+            }
+
+            closeModal();
+            populateCollectionsTable();
+        }
+
+        function editCollection(id) {
+            showCollectionForm(id);
+        }
+
+        function printReceipt(id) {
+            const collection = collections.find(c => c.id === id);
+            const receiptContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Reçu de Collecte #${String(id).padStart(6, '0')}</h3>
+                </div>
+                <div class="p-6">
+                    <div class="text-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-900">SCCK - Système de Gestion</h2>
+                        <p class="text-gray-600">Reçu de Collecte</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <p class="text-sm text-gray-600">Date:</p>
+                            <p class="font-medium">${new Date(collection.date).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Reçu N°:</p>
+                            <p class="font-medium">#${String(id).padStart(6, '0')}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Producteur:</p>
+                            <p class="font-medium">${collection.producteur}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Quantité:</p>
+                            <p class="font-medium">${collection.quantite} kg</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Prix/kg:</p>
+                            <p class="font-medium">${collection.prixKg} F</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Total:</p>
+                            <p class="font-bold text-lg">${collection.total.toLocaleString()} F</p>
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <p class="text-xs text-gray-500 text-center">Merci pour votre collaboration</p>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button onclick="window.print()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Imprimer
+                        </button>
+                        <button onclick="closeModal()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            showModal(receiptContent);
+        }
+
+        // Distribution Functions
+        function populateDistributionsTable() {
+            const tbody = document.getElementById('distributionsTableBody');
+            tbody.innerHTML = '';
+
+            distributions.forEach(distribution => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(distribution.date).toLocaleDateString('fr-FR')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${distribution.producteur}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${distribution.intrant}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${distribution.quantite}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${distribution.valeur.toLocaleString()} F</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${distribution.statut === 'remboursé' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${distribution.statut === 'remboursé' ? 'Remboursé' : 'En Attente'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="printDistributionReceipt(${distribution.id})" class="text-blue-600 hover:text-blue-900 mr-3">Reçu</button>
+                        <button onclick="editDistribution(${distribution.id})" class="text-indigo-600 hover:text-indigo-900">Modifier</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showDistributionForm(distributionId = null) {
+            const isEdit = distributionId !== null;
+            const distribution = isEdit ? distributions.find(d => d.id === distributionId) : {};
+
+            const modalContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">${isEdit ? 'Modifier' : 'Nouvelle'} Distribution</h3>
+                </div>
+                <form onsubmit="saveDistribution(event, ${distributionId})" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                            <input type="date" name="date" value="${distribution.date || new Date().toISOString().split('T')[0]}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Producteur *</label>
+                            <select name="producteurId" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sélectionner un producteur</option>
+                                ${producers.filter(p => p.statut === 'actif').map(p => 
+                                    `<option value="${p.id}" ${distribution.producteurId === p.id ? 'selected' : ''}>${p.matricule} - ${p.nom} ${p.prenom}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Type d'Intrant *</label>
+                            <select name="intrant" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sélectionner un intrant</option>
+                                <option value="Engrais NPK" ${distribution.intrant === 'Engrais NPK' ? 'selected' : ''}>Engrais NPK</option>
+                                <option value="Semences" ${distribution.intrant === 'Semences' ? 'selected' : ''}>Semences</option>
+                                <option value="Pesticides" ${distribution.intrant === 'Pesticides' ? 'selected' : ''}>Pesticides</option>
+                                <option value="Herbicides" ${distribution.intrant === 'Herbicides' ? 'selected' : ''}>Herbicides</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Quantité *</label>
+                            <input type="number" name="quantite" value="${distribution.quantite || ''}" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Valeur (F) *</label>
+                            <input type="number" name="valeur" value="${distribution.valeur || ''}" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                            <select name="statut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="en_attente" ${distribution.statut === 'en_attente' ? 'selected' : ''}>En Attente</option>
+                                <option value="remboursé" ${distribution.statut === 'remboursé' ? 'selected' : ''}>Remboursé</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-purple-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-purple-700">
+                            ${isEdit ? 'Modifier' : 'Enregistrer'}
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            showModal(modalContent);
+        }
+
+        function saveDistribution(event, distributionId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            
+            // Get producer name
+            const producer = producers.find(p => p.id === parseInt(data.producteurId));
+            data.producteur = `${producer.nom} ${producer.prenom}`;
+            data.valeur = parseInt(data.valeur);
+
+            if (distributionId) {
+                // Update existing distribution
+                const index = distributions.findIndex(d => d.id === distributionId);
+                distributions[index] = { ...distributions[index], ...data };
+                showToast('Distribution modifiée avec succès', 'success');
+            } else {
+                // Add new distribution
+                const newId = Math.max(...distributions.map(d => d.id)) + 1;
+                distributions.push({
+                    id: newId,
+                    ...data,
+                    producteurId: parseInt(data.producteurId)
+                });
+                showToast('Distribution enregistrée avec succès', 'success');
+            }
+
+            closeModal();
+            populateDistributionsTable();
+        }
+
+        function editDistribution(id) {
+            showDistributionForm(id);
+        }
+
+        function printDistributionReceipt(id) {
+            const distribution = distributions.find(d => d.id === id);
+            const receiptContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Reçu de Distribution #${String(id).padStart(6, '0')}</h3>
+                </div>
+                <div class="p-6">
+                    <div class="text-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-900">SCCK - Système de Gestion</h2>
+                        <p class="text-gray-600">Reçu de Distribution d'Intrants</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <p class="text-sm text-gray-600">Date:</p>
+                            <p class="font-medium">${new Date(distribution.date).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Reçu N°:</p>
+                            <p class="font-medium">#${String(id).padStart(6, '0')}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Producteur:</p>
+                            <p class="font-medium">${distribution.producteur}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Intrant:</p>
+                            <p class="font-medium">${distribution.intrant}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Quantité:</p>
+                            <p class="font-medium">${distribution.quantite}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Valeur:</p>
+                            <p class="font-bold text-lg">${distribution.valeur.toLocaleString()} F</p>
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <p class="text-xs text-gray-500 text-center">À rembourser lors des prochaines collectes</p>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button onclick="window.print()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Imprimer
+                        </button>
+                        <button onclick="closeModal()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            showModal(receiptContent);
+        }
+
+        // Admin Functions
+        function populateUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${user.nom}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.email}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.role}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.zone}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.statut === 'actif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${user.statut.charAt(0).toUpperCase() + user.statut.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="editUser(${user.id})" class="text-indigo-600 hover:text-indigo-900 mr-3">Modifier</button>
+                        <button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-900">Supprimer</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showUserForm(userId = null) {
+            const isEdit = userId !== null;
+            const user = isEdit ? users.find(u => u.id === userId) : {};
+
+            const modalContent = `
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">${isEdit ? 'Modifier' : 'Nouvel'} Utilisateur</h3>
+                </div>
+                <form onsubmit="saveUser(event, ${userId})" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
+                            <input type="text" name="nom" value="${user.nom || ''}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                            <input type="email" name="email" value="${user.email || ''}" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rôle *</label>
+                            <select name="role" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sélectionner un rôle</option>
+                                <option value="Administrateur" ${user.role === 'Administrateur' ? 'selected' : ''}>Administrateur</option>
+                                <option value="Superviseur" ${user.role === 'Superviseur' ? 'selected' : ''}>Superviseur</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                            <select name="zone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="Toutes" ${user.zone === 'Toutes' ? 'selected' : ''}>Toutes</option>
+                                <option value="Nord" ${user.zone === 'Nord' ? 'selected' : ''}>Nord</option>
+                                <option value="Sud" ${user.zone === 'Sud' ? 'selected' : ''}>Sud</option>
+                                <option value="Est" ${user.zone === 'Est' ? 'selected' : ''}>Est</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                            <select name="statut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="actif" ${user.statut === 'actif' ? 'selected' : ''}>Actif</option>
+                                <option value="inactif" ${user.statut === 'inactif' ? 'selected' : ''}>Inactif</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700">
+                            ${isEdit ? 'Modifier' : 'Enregistrer'}
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            showModal(modalContent);
+        }
+
+        function saveUser(event, userId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+
+            if (userId) {
+                // Update existing user
+                const index = users.findIndex(u => u.id === userId);
+                users[index] = { ...users[index], ...data };
+                showToast('Utilisateur modifié avec succès', 'success');
+            } else {
+                // Add new user
+                const newId = Math.max(...users.map(u => u.id)) + 1;
+                users.push({
+                    id: newId,
+                    ...data
+                });
+                showToast('Utilisateur créé avec succès', 'success');
+            }
+
+            closeModal();
+            populateUsersTable();
+        }
+
+        function editUser(id) {
+            showUserForm(id);
+        }
+
+        function deleteUser(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+                const index = users.findIndex(u => u.id === id);
+                users.splice(index, 1);
+                showToast('Utilisateur supprimé avec succès', 'success');
+                populateUsersTable();
+            }
+        }
+
+        function exportData(type) {
+            let data, filename;
+            
+            switch(type) {
+                case 'producers':
+                    data = producers;
+                    filename = 'producteurs.json';
+                    break;
+                case 'collections':
+                    data = collections;
+                    filename = 'collectes.json';
+                    break;
+                case 'distributions':
+                    data = distributions;
+                    filename = 'distributions.json';
+                    break;
+            }
+
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            
+            showToast(`Export ${type} téléchargé avec succès`, 'success');
+        }
+
+        // Utility Functions
+        function showModal(content) {
+            document.getElementById('modalContent').innerHTML = content;
+            document.getElementById('modalContainer').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('modalContainer').classList.add('hidden');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            
+            toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+            toast.textContent = message;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        function logout() {
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                showToast('Déconnexion réussie', 'success');
+                // In a real app, this would redirect to login page
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modalContainer').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            showModule('dashboard');
+            lucide.createIcons();
+        });
+
+        // Search and filter functionality
+        document.getElementById('producerSearch')?.addEventListener('input', function() {
+            // Filter producers based on search
+            populateProducersTable();
+        });
+
+        document.getElementById('zoneFilter')?.addEventListener('change', function() {
+            // Filter producers based on zone
+            populateProducersTable();
+        });
+
+        document.getElementById('statusFilter')?.addEventListener('change', function() {
+            // Filter producers based on status
+            populateProducersTable();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97dd0a2662d8db6f',t:'MTc1NzY1NTMwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

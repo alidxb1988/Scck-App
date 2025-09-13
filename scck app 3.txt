@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCCK - Système de Gestion Complet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .success-bg { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .warning-bg { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .info-bg { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+        .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .print-only { display: none; }
+        @media print { 
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; }
+        }
+        .offline-indicator { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            background: #ef4444; 
+            color: white; 
+            text-align: center; 
+            padding: 8px; 
+            z-index: 9999; 
+            display: none; 
+        }
+        .sync-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            rounded: 8px;
+            display: none;
+            z-index: 1000;
+        }
+        .photo-preview {
+            width: 150px;
+            height: 150px;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .badge-preview {
+            width: 300px;
+            height: 180px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Offline Indicator -->
+    <div id="offlineIndicator" class="offline-indicator">
+        <i data-lucide="wifi-off" class="w-4 h-4 inline mr-2"></i>
+        Mode hors ligne - Les données seront synchronisées lors de la reconnexion
+    </div>
+
+    <!-- Sync Indicator -->
+    <div id="syncIndicator" class="sync-indicator rounded-lg">
+        <i data-lucide="check-circle" class="w-4 h-4 inline mr-2"></i>
+        Données synchronisées
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="loading-spinner w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"></div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">SCCK Management</h2>
+            <p class="text-gray-600">Chargement du système...</p>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 bg-gradient-to-br from-blue-600 to-purple-700 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md mx-4">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">SCCK Management</h1>
+                <p class="text-gray-600">Système de Gestion Coopérative</p>
+            </div>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="loginEmail" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@scck.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
+                    <input type="password" id="loginPassword" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="rememberMe" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
+                    </label>
+                    <button type="button" class="text-sm text-blue-600 hover:text-blue-800">Mot de passe oublié?</button>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md font-medium transition-colors">
+                    Se connecter
+                </button>
+            </form>
+            <div class="mt-6 text-center">
+                <p class="text-xs text-gray-500">Version 2.1.0 - © 2024 SCCK Management</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-lg sm:text-xl font-bold">SCCK Management</h1>
+                    </div>
+                    <div class="hidden lg:block">
+                        <div class="ml-6 xl:ml-10 flex items-baseline space-x-2 xl:space-x-4">
+                            <button onclick="showModule('dashboard')" class="nav-btn px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Tableau de Bord
+                            </button>
+                            <button onclick="showModule('producers')" class="nav-btn px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Producteurs
+                            </button>
+                            <button onclick="showModule('collection')" class="nav-btn px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Collecte
+                            </button>
+                            <button onclick="showModule('distribution')" class="nav-btn px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Distribution
+                            </button>
+                            <button onclick="showModule('warehouse')" class="nav-btn px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Centre d'Achat
+                            </button>
+                            <button onclick="showModule('admin')" class="nav-btn px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium hover:bg-white hover:bg-opacity-20 transition-colors">
+                                Administration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <span class="hidden sm:block text-xs sm:text-sm" id="userInfo">Superviseur - Zone Nord</span>
+                    <button onclick="toggleMobileMenu()" class="lg:hidden p-2 rounded-md hover:bg-white hover:bg-opacity-20 transition-colors">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <button onclick="logout()" class="hidden sm:block bg-white bg-opacity-20 hover:bg-opacity-30 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors">
+                        Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobileMenu" class="lg:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-white border-opacity-20">
+                <button onclick="showModule('dashboard')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Tableau de Bord</button>
+                <button onclick="showModule('producers')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Producteurs</button>
+                <button onclick="showModule('collection')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Collecte</button>
+                <button onclick="showModule('distribution')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Distribution</button>
+                <button onclick="showModule('warehouse')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Centre d'Achat</button>
+                <button onclick="showModule('admin')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20 w-full text-left">Administration</button>
+                <div class="border-t border-white border-opacity-20 pt-2 mt-2">
+                    <div class="px-3 py-2 text-sm text-white opacity-75" id="mobileUserInfo">Superviseur - Zone Nord</div>
+                    <button onclick="logout()" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-white hover:bg-opacity-20">
+                        Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-3 sm:py-6 px-2 sm:px-4 lg:px-6 xl:px-8">
+        <!-- Dashboard Module -->
+        <div id="dashboard-module" class="module fade-in">
+            <!-- ... (dashboard content remains the same) ... -->
+        </div>
+
+        <!-- Producers Module -->
+        <div id="producers-module" class="module hidden">
+            <div class="mb-4 sm:mb-6 lg:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div class="mb-3 sm:mb-0">
+                    <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Gestion des Producteurs</h2>
+                    <p class="text-sm sm:text-base text-gray-600">Recensement et suivi des producteurs</p>
+                </div>
+                <button onclick="showProducerForm()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors">
+                    <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                    Nouveau Producteur
+                </button>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Rechercher</label>
+                        <input type="text" id="producerSearch" placeholder="Nom, matricule..." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Zone</label>
+                        <select id="zoneFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Toutes les zones</option>
+                            <option value="nord">Zone Nord</option>
+                            <option value="sud">Zone Sud</option>
+                            <option value="est">Zone Est</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-1">
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Statut</label>
+                        <select id="statusFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Tous les statuts</option>
+                            <option value="actif">Actif</option>
+                            <option value="inactif">Inactif</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Producers List -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producteur</th>
+                                <th class="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
+                                <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                                <th class="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="producersTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Producer rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Producer Registration Form -->
+        <div id="producer-form-module" class="module hidden">
+            <div class="mb-4 sm:mb-6">
+                <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Fiche d'Enrôlement</h2>
+                <p class="text-sm sm:text-base text-gray-600">Enregistrement d'un nouveau producteur</p>
+            </div>
+
+            <form id="producerForm" class="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Column: Delegate Information -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Informations sur les délégués</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                            <input type="text" id="delegateLastName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                            <input type="text" id="delegateFirstName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
+                            <input type="text" id="delegateId" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                            <select id="delegateZone" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sélectionner une zone</option>
+                                <option value="nord">Zone Nord</option>
+                                <option value="sud">Zone Sud</option>
+                                <option value="est">Zone Est</option>
+                                <option value="ouest">Zone Ouest</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Localité</label>
+                            <input type="text" id="delegateLocality" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Producer Information -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Informations sur le producteur</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                            <input type="text" id="producerLastName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                            <input type="text" id="producerFirstName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Numéro CNI</label>
+                            <input type="text" id="producerCni" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+                            <input type="tel" id="producerContact" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
+                            <input type="text" id="producerId" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Superficie (hectares)</label>
+                            <input type="number" id="producerArea" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+                            <div class="photo-preview" id="photoPreview" onclick="document.getElementById('photoInput').click()">
+                                <span class="text-gray-500 text-sm">Cliquez pour ajouter une photo</span>
+                            </div>
+                            <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="previewPhoto(event)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Badge Preview -->
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Aperçu du Badge</h3>
+                    <div class="badge-preview mx-auto">
+                        <div class="flex items-center mb-4">
+                            <div id="badgePhotoPreview" class="w-12 h-12 rounded-full bg-gray-200 mr-3 overflow-hidden">
+                                <img id="badgePhotoImg" src="" alt="" class="w-full h-full object-cover hidden">
+                            </div>
+                            <div>
+                                <div id="badgeName" class="font-semibold text-lg">Nom Prénom</div>
+                                <div id="badgeId" class="text-sm text-gray-600">Matricule: </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div class="text-gray-600">CNI:</div>
+                            <div id="badgeCni"></div>
+                            <div class="text-gray-600">Contact:</div>
+                            <div id="badgeContact"></div>
+                            <div class="text-gray-600">Zone:</div>
+                            <div id="badgeZone"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
+                    <button type="button" onclick="showModule('producers')" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Annuler
+                    </button>
+                    <button type="button" onclick="saveProducer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ... (other modules remain the same) ... -->
+    </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Simulate loading process
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }, 2000);
+
+        // Check if user is already logged in
+        function checkLoginStatus() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (isLoggedIn) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('loadingScreen').classList.add('hidden');
+                showModule('dashboard');
+            }
+        }
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            // Simple validation
+            if (email && password) {
+                localStorage.setItem('isLoggedIn', 'true');
+                document.getElementById('loginScreen').classList.add('hidden');
+                showModule('dashboard');
+            }
+        });
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        // Show selected module
+        function showModule(moduleName) {
+            // Hide all modules
+            document.querySelectorAll('.module').forEach(module => {
+                module.classList.add('hidden');
+            });
+            
+            // Show selected module
+            document.getElementById(`${moduleName}-module`).classList.remove('hidden');
+            
+            // Update active navigation button
+            document.querySelectorAll('.nav-btn, .nav-btn-mobile').forEach(btn => {
+                btn.classList.remove('bg-white', 'bg-opacity-30');
+            });
+            
+            // Add active class to clicked button
+            const activeBtn = document.querySelector(`[onclick="showModule('${moduleName}')"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white', 'bg-opacity-30');
+            }
+            
+            // Close mobile menu if open
+            document.getElementById('mobileMenu').classList.add('hidden');
+        }
+
+        // Toggle mobile menu
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobileMenu');
+            mobileMenu.classList.toggle('hidden');
+        }
+
+        // Show producer registration form
+        function showProducerForm() {
+            document.getElementById('producers-module').classList.add('hidden');
+            document.getElementById('producer-form-module').classList.remove('hidden');
+        }
+
+        // Preview photo for upload
+        function previewPhoto(event) {
+            const input = event.target;
+            const preview = document.getElementById('photoPreview');
+            const badgePreview = document.getElementById('badgePhotoImg');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Photo preview">`;
+                    badgePreview.src = e.target.result;
+                    badgePreview.classList.remove('hidden');
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Update badge preview as user types
+        const badgeFields = ['producerLastName', 'producerFirstName', 'producerCni', 'producerContact', 'delegateZone'];
+        badgeFields.forEach(field => {
+            document.getElementById(field).addEventListener('input', updateBadgePreview);
+        });
+
+        function updateBadgePreview() {
+            const lastName = document.getElementById('producerLastName').value || 'Nom';
+            const firstName = document.getElementById('producerFirstName').value || 'Prénom';
+            const cni = document.getElementById('producerCni').value || '';
+            const contact = document.getElementById('producerContact').value || '';
+            const zone = document.getElementById('delegateZone').value || '';
+            const producerId = document.getElementById('producerId').value || '';
+            
+            document.getElementById('badgeName').textContent = `${lastName} ${firstName}`;
+            document.getElementById('badgeCni').textContent = cni;
+            document.getElementById('badgeContact').textContent = contact;
+            document.getElementById('badgeZone').textContent = zone;
+            document.getElementById('badgeId').textContent = `Matricule: ${producerId}`;
+        }
+
+        // Save producer data
+        function saveProducer() {
+            // Get form values
+            const delegateLastName = document.getElementById('delegateLastName').value;
+            const delegateFirstName = document.getElementById('delegateFirstName').value;
+            const delegateId = document.getElementById('delegateId').value;
+            const delegateZone = document.getElementById('delegateZone').value;
+            const delegateLocality = document.getElementById('delegateLocality').value;
+            
+            const producerLastName = document.getElementById('producerLastName').value;
+            const producerFirstName = document.getElementById('producerFirstName').value;
+            const producerCni = document.getElementById('producerCni').value;
+            const producerContact = document.getElementById('producerContact').value;
+            const producerId = document.getElementById('producerId').value;
+            const producerArea = document.getElementById('producerArea').value;
+            
+            // Basic validation
+            if (!delegateLastName || !producerLastName) {
+                alert('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+            
+            // Create producer object
+            const producer = {
+                delegate: {
+                    lastName: delegateLastName,
+                    firstName: delegateFirstName,
+                    id: delegateId,
+                    zone: delegateZone,
+                    locality: delegateLocality
+                },
+                producer: {
+                    lastName: producerLastName,
+                    firstName: producerFirstName,
+                    cni: producerCni,
+                    contact: producerContact,
+                    id: producerId,
+                    area: producerArea,
+                    photo: document.getElementById('photoInput').files[0] ? 'uploaded' : null
+                },
+                registrationDate: new Date().toISOString()
+            };
+            
+            // Save to localStorage (in a real app, this would be sent to a server)
+            let producers = JSON.parse(localStorage.getItem('producers') || '[]');
+            producers.push(producer);
+            localStorage.setItem('producers', JSON.stringify(producers));
+            
+            // Show success message
+            alert('Producteur enregistré avec succès!');
+            
+            // Return to producers list
+            showModule('producers');
+            loadProducers();
+        }
+
+        // Load producers list
+        function loadProducers() {
+            const producers = JSON.parse(localStorage.getItem('producers') || '[]');
+            const tableBody = document.getElementById('producersTableBody');
+            
+            // Clear table
+            tableBody.innerHTML = '';
+            
+            if (producers.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                            Aucun producteur enregistré
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Add producers to table
+            producers.forEach((producer, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 flex-shrink-0 bg-gray-200 rounded-full overflow-hidden">
+                                ${producer.producer.photo ? 
+                                    `<img src="#" alt="${producer.producer.lastName}" class="h-10 w-10 object-cover">` : 
+                                    `<div class="h-10 w-10 flex items-center justify-center bg-gray-100 text-gray-400">
+                                        <i data-lucide="user" class="w-5 h-5"></i>
+                                    </div>`
+                                }
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${producer.producer.lastName} ${producer.producer.firstName}</div>
+                                <div class="text-sm text-gray-500">${producer.delegate.zone}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">${producer.producer.id}</td>
+                    <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">${producer.delegate.zone}</td>
+                    <td class="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">${producer.producer.contact}</td>
+                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Actif
+                        </span>
+                    </td>
+                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="viewProducer(${index})" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="editProducer(${index})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            <i data-lucide="edit" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteProducer(${index})" class="text-red-600 hover:text-red-900">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Refresh icons
+            lucide.createIcons();
+        }
+
+        // View producer details
+        function viewProducer(index) {
+            alert(`Voir les détails du producteur ${index}`);
+            // Implementation would show a modal with producer details
+        }
+
+        // Edit producer
+        function editProducer(index) {
+            alert(`Modifier le producteur ${index}`);
+            // Implementation would populate the form with existing data
+        }
+
+        // Delete producer
+        function deleteProducer(index) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce producteur?')) {
+                let producers = JSON.parse(localStorage.getItem('producers') || '[]');
+                producers.splice(index, 1);
+                localStorage.setItem('producers', JSON.stringify(producers));
+                loadProducers();
+            }
+        }
+
+        // Initialize the app
+        checkLoginStatus();
+        
+        // Load producers if on the producers page
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            loadProducers();
+        }
+    </script>
+</body>
+</html>
